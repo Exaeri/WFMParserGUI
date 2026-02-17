@@ -1,0 +1,3 @@
+[submodule "WFMarketApiJS"]
+	path = WFMarketApiJS
+	url = https://github.com/Exaeri/WFMarketApiJS.git
