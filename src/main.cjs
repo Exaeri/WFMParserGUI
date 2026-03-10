@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
@@ -73,7 +73,7 @@ async function getAppMeta() {
       githubUrl = pkg.repository.url;
     }
   } catch {
-    // ignore and use defaults
+  
   }
 
   githubUrl = githubUrl.replace(/^git\+/, '').replace(/\.git$/, '');
@@ -120,12 +120,9 @@ if (started) {
 }
 
 const createWindow = () => {
-  const display = screen.getPrimaryDisplay();
-  const { width, height } = display.workAreaSize;
-
   const mainWindow = new BrowserWindow({
-    width: width * 0.5,
-    height: height * 0.5,
+    width: 1280,
+    height: 700,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -134,7 +131,6 @@ const createWindow = () => {
       nodeIntegration: false,
     },
   });
-
   mainWindow.removeMenu();
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
