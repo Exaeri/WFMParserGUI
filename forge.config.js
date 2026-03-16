@@ -1,4 +1,4 @@
-import { FusesPlugin } from '@electron-forge/plugin-fuses';
+﻿import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 export default {
@@ -30,14 +30,12 @@ export default {
       config: {
         build: [
           {
-            entry: 'src/main.cjs',
+            entry: 'src/main.js',
             config: 'vite.main.config.mjs',
-            target: 'main',
           },
           {
-            entry: 'src/preload.cjs',
+            entry: 'src/preload.js',
             config: 'vite.preload.config.mjs',
-            target: 'preload',
           },
         ],
         renderer: [
@@ -59,3 +57,6 @@ export default {
     }),
   ],
 };
+
+
+

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+﻿import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
@@ -254,3 +254,6 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+
+
