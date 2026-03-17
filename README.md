@@ -3,7 +3,7 @@
 WFMParserGUI is a desktop Electron application for parsing item lists and prices from Warframe.Market. <br>
 It is based on <a href="https://github.com/Exaeri/WFMarketParser">WFMarketParser</a>, but adds a full GUI with template selection, progress tracking, logs panel and built-in JSON output viewer.<br>
 
-<img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/8c48419a-714d-480e-ba00-ff03f919ee94" />
+<img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/96b66f13-0cab-4c3a-97ab-461c86e9f7c7" />
 
 <h3>🚀Features</h3>
 ✔ Electron-based desktop GUI<br>
