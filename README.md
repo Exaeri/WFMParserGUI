@@ -56,20 +56,15 @@ WFMParserGUI/<br>
  └─ publish.bat<br>
 
 <h3>Configuration</h3>
-Templates are configured in <code>parser/templates.js</code>.<br>
+Pre-configured templates in <code>parser/templates.js</code>.<br>
 Each template defines include/exclude tag rules that are passed into parser core methods.<br><br>
-The GUI lets you:<br>
-<ul>
-  <li>Select which templates should be parsed</li>
-  <li>Enable or disable summary file generation</li>
-  <li>Inspect generated <code>prices_*.json</code> files inside the app</li>
-</ul>
 Output files are written to:<br>
 <code>output/lists</code> — filtered slug lists<br>
 <code>output/prices</code> — parsed and sorted prices<br>
 
 <h3>Usage</h3>
 One of the following methods:<br>
+Build an app and use wfmarketparser.exe<br>
 Run <code>start.bat</code><br>
 <code>npm start</code><br><br>
 Inside the app:<br>
