@@ -7,6 +7,7 @@ const LEVEL_CLASS = {
   warn: 'log-warn',
   error: 'log-error',
 };
+const TEMPLATE_NAME_SELECTOR = 'input[name="template"]';
 
 const dom = {
   logList: document.querySelector('#log-list'),
@@ -28,7 +29,9 @@ const dom = {
   githubLink: document.querySelector('#github-link'),
 };
 
-let isParsing = false;
+const state = {
+  isParsing: false,
+};
 
 function formatArg(arg) {
   if (arg instanceof Error) {
@@ -46,12 +49,43 @@ function formatArg(arg) {
   }
 }
 
-function getTimePrefix() {
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const ss = String(now.getSeconds()).padStart(2, '0');
+function formatTemplateLabel(value) {
+  const spaced = String(value).replace(/([a-z])([A-Z])/g, '$1 $2');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function formatTimePrefix(date = new Date()) {
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
   return `[${hh}:${mm}:${ss}]`;
+}
+
+function asNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function replaceContent(container, ...nodes) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren(...nodes);
+}
+
+function createElement(tagName, options = {}) {
+  const node = document.createElement(tagName);
+  if (options.className) {
+    node.className = options.className;
+  }
+  if (options.textContent !== undefined) {
+    node.textContent = options.textContent;
+  }
+  if (options.html !== undefined) {
+    node.innerHTML = options.html;
+  }
+  return node;
 }
 
 function appendLog(level, args) {
@@ -64,10 +98,12 @@ function appendLog(level, args) {
     return;
   }
 
-  const line = document.createElement('div');
-  line.className = `log-line ${LEVEL_CLASS[level] || LEVEL_CLASS.log}`;
-  line.textContent = `${getTimePrefix()} ${message}`;
-  dom.logList.appendChild(line);
+  const line = createElement('div', {
+    className: `log-line ${LEVEL_CLASS[level] || LEVEL_CLASS.log}`,
+    textContent: `${formatTimePrefix()} ${message}`,
+  });
+
+  dom.logList.append(line);
 
   while (dom.logList.children.length > LOG_LIMIT) {
     dom.logList.firstElementChild?.remove();
@@ -87,7 +123,7 @@ function hookConsoleToPanel() {
 }
 
 function hookMainLogsToPanel() {
-  window.wfm?.onMainLog?.((payload) => {
+  window.wfmp?.onMainLog?.((payload) => {
     if (!payload) {
       return;
     }
@@ -99,74 +135,65 @@ function hookMainLogsToPanel() {
 }
 
 function setProgressVisible(visible) {
-  if (!dom.progressPanel) {
-    return;
-  }
-
-  dom.progressPanel.classList.toggle('is-visible', visible);
+  dom.progressPanel?.classList.toggle('is-visible', visible);
 }
 
 function setParseButtonsState(running) {
-  isParsing = running;
+  state.isParsing = running;
+
   if (dom.startButton) {
     dom.startButton.disabled = running;
   }
+
   if (dom.stopButton) {
     dom.stopButton.disabled = !running;
   }
 }
 
-function setProgressState(payload) {
+function setProgressState(payload = {}) {
   if (!dom.progressLabel || !dom.progressValue || !dom.progressFill) {
     return;
   }
 
-  const safePercent = Math.max(0, Math.min(100, Number(payload?.percent || 0)));
+  const safePercent = Math.max(0, Math.min(100, Number(payload.percent || 0)));
   dom.progressFill.style.width = `${safePercent}%`;
   dom.progressValue.textContent = `${safePercent}%`;
 
-  if (payload?.state === 'start') {
-    setParseButtonsState(true);
-    dom.progressLabel.textContent = 'Progress: running';
-    setProgressVisible(true);
-    return;
-  }
-
-  if (payload?.state === 'stopping') {
-    dom.progressLabel.textContent = 'Progress: stopping...';
-    setProgressVisible(true);
-    return;
-  }
-
-  if (payload?.state === 'stopped') {
-    dom.progressLabel.textContent = 'Progress: stopped';
-    setParseButtonsState(false);
-    setTimeout(() => setProgressVisible(false), 900);
-    return;
-  }
-
-  if (payload?.state === 'done') {
-    dom.progressLabel.textContent = 'Progress: done';
-    setParseButtonsState(false);
-    setTimeout(() => setProgressVisible(false), 700);
-    return;
-  }
-
-  if (payload?.state === 'error') {
-    dom.progressLabel.textContent = 'Progress: error';
-    setParseButtonsState(false);
-    setTimeout(() => setProgressVisible(false), 1200);
-    return;
+  switch (payload.state) {
+    case 'start':
+      setParseButtonsState(true);
+      dom.progressLabel.textContent = 'Progress: running';
+      setProgressVisible(true);
+      return;
+    case 'stopping':
+      dom.progressLabel.textContent = 'Progress: stopping...';
+      setProgressVisible(true);
+      return;
+    case 'stopped':
+      dom.progressLabel.textContent = 'Progress: stopped';
+      setParseButtonsState(false);
+      setTimeout(() => setProgressVisible(false), 900);
+      return;
+    case 'done':
+      dom.progressLabel.textContent = 'Progress: done';
+      setParseButtonsState(false);
+      setTimeout(() => setProgressVisible(false), 700);
+      return;
+    case 'error':
+      dom.progressLabel.textContent = 'Progress: error';
+      setParseButtonsState(false);
+      setTimeout(() => setProgressVisible(false), 1200);
+      return;
+    default:
+      break;
   }
 
   setProgressVisible(true);
 
-  if (payload?.template) {
+  if (payload.template) {
     const current = Number(payload.current || 0);
     const total = Number(payload.total || 0);
-    const spaced = payload.template.replace(/([a-z])([A-Z])/g, '$1 $2');
-    const title = spaced.charAt(0).toUpperCase() + spaced.slice(1);
-    dom.progressLabel.textContent = `Progress: ${title} ${current}/${total}`;
+    dom.progressLabel.textContent = `Progress: ${formatTemplateLabel(payload.template)} ${current}/${total}`;
     return;
   }
 
@@ -174,9 +201,23 @@ function setProgressState(payload) {
 }
 
 function hookProgressEvents() {
-  window.wfm?.onProgress?.((payload) => {
+  window.wfmp?.onProgress?.((payload) => {
     setProgressState(payload || {});
   });
+}
+
+function createTemplateOption(key, template) {
+  const label = createElement('label', { className: 'template-option' });
+  const checkbox = createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.id = `template-${key}`;
+  checkbox.name = 'template';
+  checkbox.value = key;
+  checkbox.checked = Boolean(template?.checked ?? false);
+
+  const text = createElement('span', { textContent: formatTemplateLabel(key) });
+  label.append(checkbox, text);
+  return label;
 }
 
 function renderTemplateCheckboxes() {
@@ -184,35 +225,24 @@ function renderTemplateCheckboxes() {
     return;
   }
 
-  dom.templateContainer.innerHTML = '';
+  const templateNodes = Object.entries(templates).map(([key, template]) => {
+    return createTemplateOption(key, template);
+  });
 
-  for (const key of Object.keys(templates)) {
-    const id = `template-${key}`;
-    const label = document.createElement('label');
-    label.className = 'template-option';
-
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = id;
-    checkbox.name = 'template';
-    checkbox.value = key;
-    checkbox.checked = Boolean(templates[key]?.checked ?? false);
-
-    const text = document.createElement('span');
-    const spaced = key.replace(/([a-z])([A-Z])/g, '$1 $2');
-    text.textContent = spaced.charAt(0).toUpperCase() + spaced.slice(1);
-
-    label.append(checkbox, text);
-    dom.templateContainer.appendChild(label);
-  }
+  replaceContent(dom.templateContainer, ...templateNodes);
 }
 
 function getSelectedTemplates() {
-  const selected = Array.from(
-    document.querySelectorAll('input[name="template"]:checked'),
-  ).map((node) => node.value);
+  if (!dom.templateContainer) {
+    return {};
+  }
 
-  return selected.reduce((acc, key) => {
+  const selectedKeys = Array.from(
+    dom.templateContainer.querySelectorAll(`${TEMPLATE_NAME_SELECTOR}:checked`),
+    (node) => node.value,
+  );
+
+  return selectedKeys.reduce((acc, key) => {
     if (templates[key]) {
       acc[key] = templates[key];
     }
@@ -222,16 +252,6 @@ function getSelectedTemplates() {
 
 function isSummaryEnabled() {
   return Boolean(dom.summaryCheckbox?.checked);
-}
-
-function wireClearLogsButton() {
-  if (!dom.clearLogs || !dom.logList) {
-    return;
-  }
-
-  dom.clearLogs.addEventListener('click', () => {
-    dom.logList.innerHTML = '';
-  });
 }
 
 function setOutputMeta(modifiedAt) {
@@ -251,20 +271,10 @@ function setOutputMeta(modifiedAt) {
 }
 
 function renderOutputEmpty(message) {
-  if (!dom.outputView) {
-    return;
-  }
-
-  dom.outputView.innerHTML = '';
-  const empty = document.createElement('div');
-  empty.className = 'output-empty';
-  empty.textContent = message;
-  dom.outputView.appendChild(empty);
-}
-
-function asNumber(value) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
+  replaceContent(dom.outputView, createElement('div', {
+    className: 'output-empty',
+    textContent: message,
+  }));
 }
 
 function detectPriceRows(data) {
@@ -285,31 +295,25 @@ function detectPriceRows(data) {
     }
   }
 
-  if (Array.isArray(data)) {
-    const nameKeys = ['item', 'name', 'template', 'item_name', 'id'];
-    const priceKeys = ['price', 'avgPrice', 'medianPrice', 'value', 'plat'];
-    const rows = [];
+  const nameKeys = ['item', 'name', 'template', 'item_name', 'id'];
+  const priceKeys = ['price', 'avgPrice', 'medianPrice', 'value', 'plat'];
 
-    for (const row of data) {
+  return (Array.isArray(data) ? data : [])
+    .map((row) => {
       if (!row || typeof row !== 'object') {
-        continue;
+        return null;
       }
 
       const nameKey = nameKeys.find((key) => typeof row[key] === 'string');
       const priceKey = priceKeys.find((key) => asNumber(row[key]) !== null);
       if (!nameKey || !priceKey) {
-        continue;
+        return null;
       }
 
-      rows.push({ item: String(row[nameKey]), price: asNumber(row[priceKey]) });
-    }
-
-    return rows
-      .filter((row) => row.price !== null)
-      .sort((a, b) => b.price - a.price);
-  }
-
-  return [];
+      return { item: String(row[nameKey]), price: asNumber(row[priceKey]) };
+    })
+    .filter((row) => row && row.price !== null)
+    .sort((a, b) => b.price - a.price);
 }
 
 function renderPriceRows(rows) {
@@ -317,40 +321,32 @@ function renderPriceRows(rows) {
     return;
   }
 
-  dom.outputView.innerHTML = '';
-  const table = document.createElement('table');
-  table.className = 'output-table';
+  const table = createElement('table', { className: 'output-table' });
   table.innerHTML = '<thead><tr><th>Item</th><th>Price</th></tr></thead>';
 
-  const tbody = document.createElement('tbody');
+  const tbody = createElement('tbody');
   for (const row of rows) {
-    const tr = document.createElement('tr');
-    const itemTd = document.createElement('td');
-    const priceTd = document.createElement('td');
-    itemTd.textContent = row.item;
-    priceTd.textContent = String(row.price);
-    tr.append(itemTd, priceTd);
+    const tr = createElement('tr');
+    tr.append(
+      createElement('td', { textContent: row.item }),
+      createElement('td', { textContent: String(row.price) }),
+    );
     tbody.appendChild(tr);
   }
 
   table.appendChild(tbody);
-  dom.outputView.appendChild(table);
+  replaceContent(dom.outputView, table);
 }
 
 function renderOutputJson(data) {
-  if (!dom.outputView) {
-    return;
-  }
-
-  dom.outputView.innerHTML = '';
-  const pre = document.createElement('pre');
-  pre.className = 'output-json';
-  pre.textContent = JSON.stringify(data, null, 2);
-  dom.outputView.appendChild(pre);
+  replaceContent(dom.outputView, createElement('pre', {
+    className: 'output-json',
+    textContent: JSON.stringify(data, null, 2),
+  }));
 }
 
 async function loadSelectedOutputFile() {
-  if (!dom.outputSelect || !window.wfm?.readOutputFile) {
+  if (!dom.outputSelect || !window.wfmp?.readOutputFile) {
     return;
   }
 
@@ -362,13 +358,15 @@ async function loadSelectedOutputFile() {
   }
 
   try {
-    const payload = await window.wfm.readOutputFile(selectedFile);
+    const payload = await window.wfmp.readOutputFile(selectedFile);
     setOutputMeta(payload?.modifiedAt);
     const rows = detectPriceRows(payload?.data);
+
     if (rows.length > 0) {
       renderPriceRows(rows);
       return;
     }
+
     renderOutputJson(payload?.data);
   } catch (error) {
     console.error('read output file failed', error);
@@ -377,28 +375,31 @@ async function loadSelectedOutputFile() {
   }
 }
 
+function createOutputFileOptions(files) {
+  const placeholder = createElement('option', {
+    textContent: files.length > 0 ? 'Select file...' : 'No json files',
+  });
+  placeholder.value = '';
+
+  const options = files.map((file) => {
+    const option = createElement('option', { textContent: file });
+    option.value = file;
+    return option;
+  });
+
+  return [placeholder, ...options];
+}
+
 async function loadOutputFiles() {
-  if (!dom.outputSelect || !window.wfm?.listOutputFiles) {
+  if (!dom.outputSelect || !window.wfmp?.listOutputFiles) {
     return;
   }
 
   const previousValue = dom.outputSelect.value;
 
   try {
-    const files = await window.wfm.listOutputFiles();
-    dom.outputSelect.innerHTML = '';
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = files.length > 0 ? 'Select file...' : 'No json files';
-    dom.outputSelect.appendChild(placeholder);
-
-    for (const file of files) {
-      const option = document.createElement('option');
-      option.value = file;
-      option.textContent = file;
-      dom.outputSelect.appendChild(option);
-    }
+    const files = await window.wfmp.listOutputFiles();
+    replaceContent(dom.outputSelect, ...createOutputFileOptions(files));
 
     if (previousValue && files.includes(previousValue)) {
       dom.outputSelect.value = previousValue;
@@ -416,23 +417,25 @@ async function loadOutputFiles() {
   }
 }
 
-function wireOutputViewer() {
-  if (!dom.outputSelect) {
+function bindClearLogsButton() {
+  if (!dom.clearLogs || !dom.logList) {
     return;
   }
 
-  dom.outputSelect.addEventListener('change', () => {
+  dom.clearLogs.addEventListener('click', () => {
+    replaceContent(dom.logList);
+  });
+}
+
+function bindOutputViewer() {
+  dom.outputSelect?.addEventListener('change', () => {
     loadSelectedOutputFile();
   });
 }
 
-function wireStartButton() {
-  if (!dom.startButton) {
-    return;
-  }
-
-  dom.startButton.addEventListener('click', async () => {
-    if (isParsing) {
+function bindStartButton() {
+  dom.startButton?.addEventListener('click', async () => {
+    if (state.isParsing) {
       return;
     }
 
@@ -443,7 +446,12 @@ function wireStartButton() {
     }
 
     try {
-      await window.wfm.parseTemplates(selectedTemplates, isSummaryEnabled());
+      const result = await window.wfmp.parseTemplates(selectedTemplates, isSummaryEnabled());
+      if (result?.cancelled) {
+        console.warn('Parsing stopped by user');
+        return;
+      }
+
       console.log('parse finished');
       await loadOutputFiles();
     } catch (error) {
@@ -452,33 +460,24 @@ function wireStartButton() {
   });
 }
 
-function wireStopButton() {
-  if (!dom.stopButton) {
-    return;
-  }
-
-  dom.stopButton.addEventListener('click', async () => {
-    if (!isParsing) {
+function bindStopButton() {
+  dom.stopButton?.addEventListener('click', async () => {
+    if (!state.isParsing) {
       return;
     }
 
     try {
-      await window.wfm.stopParse();
-      console.warn('stop requested');
+      await window.wfmp.stopParse();
     } catch (error) {
       console.error('stop failed', error);
     }
   });
 }
 
-function wireOpenFolderButton() {
-  if (!dom.openFolderButton) {
-    return;
-  }
-
-  dom.openFolderButton.addEventListener('click', async () => {
+function bindOpenFolderButton() {
+  dom.openFolderButton?.addEventListener('click', async () => {
     try {
-      await window.wfm.openOutputFolder();
+      await window.wfmp.openOutputFolder();
     } catch (error) {
       console.error('open folder failed', error);
     }
@@ -491,17 +490,21 @@ async function loadAppMeta() {
   }
 
   try {
-    const meta = await window.wfm.getAppMeta();
-    const name = meta?.name || 'WFMParser';
-    const version = meta?.version || '1.0.0';
-    const githubUrl = meta?.githubUrl || 'https://github.com';
-
-    dom.appName.textContent = name;
-    dom.appVersion.textContent = `Version: ${version}`;
-    dom.githubLink.setAttribute('href', githubUrl);
+    const meta = await window.wfmp.getAppMeta();
+    dom.appName.textContent = meta?.name || 'WFMParser';
+    dom.appVersion.textContent = `Version: ${meta?.version || '1.0.0'}`;
+    dom.githubLink.setAttribute('href', meta?.githubUrl || 'https://github.com');
   } catch (error) {
     console.error('load app meta failed', error);
   }
+}
+
+function bindUi() {
+  bindClearLogsButton();
+  bindOutputViewer();
+  bindStartButton();
+  bindStopButton();
+  bindOpenFolderButton();
 }
 
 function init() {
@@ -509,14 +512,10 @@ function init() {
   hookMainLogsToPanel();
   hookProgressEvents();
   renderTemplateCheckboxes();
-  wireClearLogsButton();
-  wireOutputViewer();
-  wireStartButton();
-  wireStopButton();
-  wireOpenFolderButton();
+  bindUi();
   setParseButtonsState(false);
-  loadAppMeta();
-  loadOutputFiles();
+  void loadAppMeta();
+  void loadOutputFiles();
 }
 
 init();

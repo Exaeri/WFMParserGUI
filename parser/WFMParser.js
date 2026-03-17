@@ -197,7 +197,6 @@ export default class WFMParser {
                 parsedPrices = await this.parsePrices(parsedList, templateProgress, shouldStop);
             }
             catch (error) {
-                console.log(error);
                 throw error;
             }
             const sortedResult = sortByValues(parsedPrices);
@@ -218,3 +217,5 @@ export default class WFMParser {
         }
     }
 }
+
+

@@ -1,6 +1,15 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { contextBridge, ipcRenderer } from 'electron';
+
+const IPC_CHANNELS = {
+  parseTemplates: 'wfmp:parse-templates',
+  stopParse: 'wfmp:stop-parse',
+  openOutputFolder: 'wfmp:open-output-folder',
+  listOutputFiles: 'wfmp:list-output-files',
+  readOutputFile: 'wfmp:read-output-file',
+  getAppMeta: 'app:get-meta',
+  progress: 'wfmp:progress',
+  mainLog: 'main:log',
+};
 
 function onChannel(channel, callback) {
   if (typeof callback !== 'function') {
@@ -15,29 +24,31 @@ function onChannel(channel, callback) {
   };
 }
 
-contextBridge.exposeInMainWorld('wfm', {
+const api = {
   parseTemplates(templates, summaryFile = false) {
-    return ipcRenderer.invoke('wfm:parse-templates', templates, summaryFile);
+    return ipcRenderer.invoke(IPC_CHANNELS.parseTemplates, templates, summaryFile);
   },
   stopParse() {
-    return ipcRenderer.invoke('wfm:stop-parse');
+    return ipcRenderer.invoke(IPC_CHANNELS.stopParse);
   },
   openOutputFolder() {
-    return ipcRenderer.invoke('wfm:open-output-folder');
+    return ipcRenderer.invoke(IPC_CHANNELS.openOutputFolder);
   },
   listOutputFiles() {
-    return ipcRenderer.invoke('wfm:list-output-files');
+    return ipcRenderer.invoke(IPC_CHANNELS.listOutputFiles);
   },
   readOutputFile(fileName) {
-    return ipcRenderer.invoke('wfm:read-output-file', fileName);
+    return ipcRenderer.invoke(IPC_CHANNELS.readOutputFile, fileName);
   },
   getAppMeta() {
-    return ipcRenderer.invoke('app:get-meta');
+    return ipcRenderer.invoke(IPC_CHANNELS.getAppMeta);
   },
   onProgress(callback) {
-    return onChannel('wfm:progress', callback);
+    return onChannel(IPC_CHANNELS.progress, callback);
   },
   onMainLog(callback) {
-    return onChannel('main:log', callback);
+    return onChannel(IPC_CHANNELS.mainLog, callback);
   },
-});
+};
+
+contextBridge.exposeInMainWorld('wfmp', api);

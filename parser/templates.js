@@ -1,6 +1,6 @@
 export const templates = {
     warframes: {
-        checked: false,
+        checked: true,
         tags: {
             include: ['warframe', 'set'],
             exclude: [],
@@ -42,7 +42,7 @@ export const templates = {
         },
     },
     primedWeapons: {
-        checked: false,
+        checked: true,
         tags: {
             include: ['weapon', 'prime', 'set'],
             exclude: [],
@@ -70,7 +70,7 @@ export const templates = {
         },
     },
     syndicateWeapons: {
-        checked: false,
+        checked: true,
         tags: {
             include: ['syndicate', 'weapon'],
             exclude: [],

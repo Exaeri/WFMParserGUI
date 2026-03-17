@@ -1,9 +1,10 @@
-﻿import { FusesPlugin } from '@electron-forge/plugin-fuses';
+import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 export default {
   packagerConfig: {
     asar: true,
+    icon: './assets/wfmp',
   },
   rebuildConfig: {},
   makers: [

@@ -1,15 +1,29 @@
-﻿import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import axios from '../WFMarketApiJS/node_modules/axios/index.js';
 import WFMParser from '../parser/WFMParser.js';
 import { readJSON } from '../parser/Utils.js';
-import axios from '../WFMarketApiJS/node_modules/axios/index.js';
+
+const MAIN_LOG_CHANNEL = 'main:log';
+const PROGRESS_CHANNEL = 'wfmp:progress';
+const IPC_CHANNELS = {
+  parseTemplates: 'wfmp:parse-templates',
+  stopParse: 'wfmp:stop-parse',
+  openOutputFolder: 'wfmp:open-output-folder',
+  listOutputFiles: 'wfmp:list-output-files',
+  readOutputFile: 'wfmp:read-output-file',
+  getAppMeta: 'app:get-meta',
+};
+const CONSOLE_LEVELS = ['log', 'warn', 'error'];
 
 const parseState = {
   running: false,
   cancelled: false,
 };
+
+let consoleHooked = false;
 
 function isExternalHttpUrl(url) {
   return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
@@ -73,7 +87,7 @@ async function getAppMeta() {
       githubUrl = pkg.repository.url;
     }
   } catch {
-  
+    // Fallback to Electron app metadata when package.json is unavailable.
   }
 
   githubUrl = githubUrl.replace(/^git\+/, '').replace(/\.git$/, '');
@@ -97,42 +111,30 @@ function serializeArg(arg) {
 }
 
 function broadcastMainLog(level, args) {
-  sendToAllWindows('main:log', { level, args: args.map(serializeArg) });
+  sendToAllWindows(MAIN_LOG_CHANNEL, { level, args: args.map(serializeArg) });
 }
 
 function broadcastProgress(payload) {
-  sendToAllWindows('wfm:progress', payload);
+  sendToAllWindows(PROGRESS_CHANNEL, payload);
 }
 
 function hookMainConsoleToRenderer() {
-  ['log', 'warn', 'error'].forEach((level) => {
+  if (consoleHooked) {
+    return;
+  }
+
+  consoleHooked = true;
+
+  for (const level of CONSOLE_LEVELS) {
     const original = console[level].bind(console);
     console[level] = (...args) => {
       original(...args);
       broadcastMainLog(level, args);
     };
-  });
+  }
 }
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
-}
-
-const createWindow = () => {
-  const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 700,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      devTools: false,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  mainWindow.removeMenu();
-
+function configureExternalNavigation(mainWindow) {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isExternalHttpUrl(url)) {
       shell.openExternal(url);
@@ -148,98 +150,131 @@ const createWindow = () => {
       shell.openExternal(url);
     }
   });
+}
+
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 700,
+    resizable: false,
+    icon: path.join(app.getAppPath(), 'assets', 'wfmp.ico'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      devTools: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  mainWindow.removeMenu();
+  configureExternalNavigation(mainWindow);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    return;
   }
-};
 
-app.whenReady().then(() => {
+  mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+}
+
+async function handleParseTemplates(_event, templates, summaryFile) {
+  if (parseState.running) {
+    throw new Error('Parsing is already running');
+  }
+
+  WFMParser.setOutputFolder(getOutputDir());
+  parseState.running = true;
+  parseState.cancelled = false;
+  broadcastProgress({ state: 'start', current: 0, total: 0, percent: 0, template: null });
+
+  try {
+    await WFMParser.parseTemplates(
+      templates,
+      summaryFile,
+      (progress) => broadcastProgress({ state: 'progress', ...progress }),
+      () => parseState.cancelled,
+    );
+
+    if (parseState.cancelled) {
+      broadcastProgress({ state: 'stopped' });
+      return { ok: true, cancelled: true };
+    }
+
+    broadcastProgress({ state: 'done', percent: 100 });
+    return { ok: true };
+  } catch (error) {
+    if (parseState.cancelled) {
+      broadcastProgress({ state: 'stopped' });
+      return { ok: true, cancelled: true };
+    }
+
+    broadcastProgress({ state: 'error' });
+    throw error;
+  } finally {
+    parseState.running = false;
+    parseState.cancelled = false;
+  }
+}
+
+function handleStopParse() {
+  if (!parseState.running) {
+    return { ok: true, running: false };
+  }
+
+  parseState.cancelled = true;
+  broadcastProgress({ state: 'stopping' });
+  return { ok: true, running: true };
+}
+
+async function handleOpenOutputFolder() {
+  const pricesPath = getPricesDir();
+  await mkdir(pricesPath, { recursive: true });
+  const openError = await shell.openPath(pricesPath);
+
+  if (openError) {
+    throw new Error(openError);
+  }
+
+  return { ok: true, path: pricesPath };
+}
+
+async function handleListOutputFiles() {
+  const pricesPath = getPricesDir();
+  await mkdir(pricesPath, { recursive: true });
+
+  const entries = await readdir(pricesPath, { withFileTypes: true });
+  const files = entries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  return files;
+}
+
+async function handleReadOutputFile(_event, fileName) {
+  const filePath = resolvePriceFilePath(fileName);
+  const data = await readJSON(filePath);
+  const fileStats = await stat(filePath);
+  return {
+    file: path.basename(filePath),
+    data,
+    modifiedAt: fileStats.mtime.toISOString(),
+  };
+}
+
+function registerIpcHandlers() {
+  ipcMain.handle(IPC_CHANNELS.parseTemplates, handleParseTemplates);
+  ipcMain.handle(IPC_CHANNELS.stopParse, handleStopParse);
+  ipcMain.handle(IPC_CHANNELS.openOutputFolder, handleOpenOutputFolder);
+  ipcMain.handle(IPC_CHANNELS.listOutputFiles, handleListOutputFiles);
+  ipcMain.handle(IPC_CHANNELS.readOutputFile, handleReadOutputFile);
+  ipcMain.handle(IPC_CHANNELS.getAppMeta, getAppMeta);
+}
+
+function setupApp() {
   axios.defaults.proxy = false;
   hookMainConsoleToRenderer();
-
-  ipcMain.handle('wfm:parse-templates', async (_event, templates, summaryFile) => {
-    if (parseState.running) {
-      throw new Error('Parsing is already running');
-    }
-
-    WFMParser.setOutputFolder(getOutputDir());
-    parseState.running = true;
-    parseState.cancelled = false;
-    broadcastProgress({ state: 'start', current: 0, total: 0, percent: 0, template: null });
-
-    try {
-      await WFMParser.parseTemplates(templates, summaryFile, (progress) => {
-        broadcastProgress({ state: 'progress', ...progress });
-      }, () => parseState.cancelled);
-
-      if (parseState.cancelled) {
-        broadcastProgress({ state: 'stopped' });
-        return { ok: true, cancelled: true };
-      }
-
-      broadcastProgress({ state: 'done', percent: 100 });
-      return { ok: true };
-    } catch (error) {
-      if (parseState.cancelled) {
-        broadcastProgress({ state: 'stopped' });
-        return { ok: true, cancelled: true };
-      }
-
-      broadcastProgress({ state: 'error' });
-      throw error;
-    } finally {
-      parseState.running = false;
-      parseState.cancelled = false;
-    }
-  });
-
-  ipcMain.handle('wfm:stop-parse', () => {
-    if (!parseState.running) {
-      return { ok: true, running: false };
-    }
-
-    parseState.cancelled = true;
-    broadcastProgress({ state: 'stopping' });
-    return { ok: true, running: true };
-  });
-
-  ipcMain.handle('wfm:open-output-folder', async () => {
-    const pricesPath = getPricesDir();
-    await mkdir(pricesPath, { recursive: true });
-    const openError = await shell.openPath(pricesPath);
-    if (openError) {
-      throw new Error(openError);
-    }
-
-    return { ok: true, path: pricesPath };
-  });
-
-  ipcMain.handle('wfm:list-output-files', async () => {
-    const pricesPath = getPricesDir();
-    await mkdir(pricesPath, { recursive: true });
-
-    const entries = await readdir(pricesPath, { withFileTypes: true });
-    const files = entries
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
-      .map((entry) => entry.name);
-
-    return files.sort((a, b) => a.localeCompare(b));
-  });
-
-  ipcMain.handle('wfm:read-output-file', async (_event, fileName) => {
-    const filePath = resolvePriceFilePath(fileName);
-    const data = await readJSON(filePath);
-    const fileStats = await stat(filePath);
-    return { file: path.basename(filePath), data, modifiedAt: fileStats.mtime.toISOString() };
-  });
-
-  ipcMain.handle('app:get-meta', async () => {
-    return getAppMeta();
-  });
-
+  registerIpcHandlers();
   createWindow();
 
   app.on('activate', () => {
@@ -247,13 +282,16 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-});
+}
+
+if (started) {
+  app.quit();
+}
+
+app.whenReady().then(setupApp);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-
-

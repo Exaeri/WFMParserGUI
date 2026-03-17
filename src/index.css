@@ -1,9 +1,78 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
 
 :root {
   --bg-dark: #270245;
   --bg-light: #fd5d8d;
+  --body-font: Roboto, Sans-Serif, Tahoma, system-ui;
+  --pixel-font: "Press Start 2P", monospace;
+  --mono-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --intro-bg: #2b52ff;
+  --overlay-shadow: rgba(0, 0, 0, 0.42);
+  --scanline-shadow: rgba(0, 0, 0, 0.5);
+
+  --panel-bg: #c0c0c0;
+  --panel-bg-alt: #d8d8d8;
+  --panel-bg-track: #9a9a9a;
+  --panel-bg-progress: #8a8a8a;
+  --panel-border-dark: #1b1b1b;
+  --panel-border-mid: #242424;
+  --panel-border-header: #202020;
+  --panel-text: #111;
+  --panel-text-muted: #333;
+  --panel-text-soft: #444;
+  --panel-warn: #7a5a00;
+  --panel-error: #8b0f20;
+
+  --white: #fff;
+  --white-soft: #dfdfdf;
+  --white-mid: #d9d9d9;
+  --shadow-dark: #2a2a2a;
+  --shadow-darker: #292929;
+  --shadow-mid: #7f7f7f;
+  --shadow-mid-2: rgb(158, 158, 158);
+  --shadow-track: #363636;
+  --scroll-border: #3b3b3b;
+  --scroll-thumb-border: #2e2e2e;
+  --scroll-thumb: #3a3a3a;
+
+  --header-bg: #111;
+  --header-text: #ffffff;
+  --github-text: #ffffff;
+  --accent-blue: #2b52ff;
+  --accent-green-dark: #1d7f2a;
+  --accent-green-light: #4bd76b;
+
+  --checkbox-size: 14px;
+  --window-btn-size: 16px;
+  --window-btn-font-size: 8px;
+  --progress-height: 12px;
+  --scrollbar-size: 12px;
+  --table-odd-lines: hsl(0deg 0% 75%);
+
+  --panel-chrome-shadow:
+    inset -1px -1px var(--shadow-dark),
+    inset 1px 1px var(--white),
+    inset -2px -2px var(--shadow-mid),
+    inset 2px 2px var(--white);
+  --control-inset-shadow:
+    inset -1px -1px var(--shadow-track),
+    inset 1px 1px var(--white);
+  --button-shadow:
+    inset -1px -1px var(--shadow-darker),
+    inset 1px 1px var(--white),
+    inset -2px -2px var(--shadow-mid-2),
+    inset 2px 2px var(--white);
+  --button-shadow-active:
+    inset -1px -1px var(--white),
+    inset 1px 1px var(--shadow-darker),
+    inset -2px -2px var(--white),
+    inset 2px 2px var(--shadow-mid-2);
+
+  --transition-fast: 120ms ease;
+  --progress-transition: 220ms linear;
+  --progress-shift-duration: 2.2s;
 }
 
 * {
@@ -24,21 +93,21 @@ body {
 }
 
 body {
-  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--body-font);
+  font-weight: 600;
 }
 
 body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.42) 100%);
+  z-index: 500;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0%, var(--overlay-shadow) 100%);
   mix-blend-mode: overlay;
   pointer-events: none;
-  z-index: 500;
 }
 
 .intro-wrap-bg,
-.noise,
 .scanlines {
   position: fixed;
   inset: 0;
@@ -46,22 +115,7 @@ body::before {
 
 .intro-wrap-bg {
   z-index: 200;
-  background: #2b52ff;
-}
-
-.noise {
-  z-index: 400;
-  opacity: 0.8;
-}
-
-.noise-moving {
-  z-index: 450;
-  opacity: 1;
-}
-
-.noise-moving::before {
-  animation: noise 1s infinite alternate;
-  will-change: background-position;
+  background: var(--intro-bg);
 }
 
 .scanlines {
@@ -75,69 +129,31 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.5) 51%);
+  background: linear-gradient(to bottom, transparent 50%, var(--scanline-shadow) 51%);
   background-size: 100% 4px;
   will-change: background;
   animation: scanlines 0.2s linear infinite;
 }
 
 #app-layout {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 600;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-between;
   padding: 0.75rem;
-  height: 100%;
-  display: grid;
-  grid-template-columns: minmax(217px, 0.76fr) minmax(0, 0.62fr) minmax(0, 0.24fr);
-  grid-template-rows: minmax(220px, 0.72fr) minmax(180px, 0.28fr);
-  gap: 0.8rem;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #c0c0c0;
-  border: 1px solid #1b1b1b;
-  outline: 1px solid #ffffff;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border-dark);
+  outline: 1px solid var(--white);
   outline-offset: -2px;
-  box-shadow:
-    inset -1px -1px #2a2a2a,
-    inset 1px 1px #ffffff,
-    inset -2px -2px #7f7f7f,
-    inset 2px 2px #ffffff;
-}
-
-#controls-panel {
-  grid-column: 1 / 2;
-  grid-row: 1 / 3;
-  position: relative;
-  transform: translate(5px, -5px);
-  padding: 0.65rem 0.78rem 0.74rem !important;
-  max-height: 86%;
-  max-width: 95%;
-  align-self: start;
-}
-
-#logs-panel {
-  grid-column: 1 / 4;
-  grid-row: 2 / 4;
-  transform: translate(30px, 95px);
-  position: relative;
-  max-height: 72%;
-  max-width: 45%;
-  padding: 0.65rem 0.78rem 0.74rem !important;
-  
-}
-
-#output-panel {
-  grid-column: 2 / 4;
-  grid-row: 1 / 4;
-  max-height: 90%;
-  max-width: 100%;
-  transform: translate(-5px, 10px);
-  padding: 0.65rem 0.78rem 0.74rem !important;
-  position: relative;
-  align-self: stretch;
+  box-shadow: var(--panel-chrome-shadow);
 }
 
 .panel-head {
@@ -145,19 +161,18 @@ body::before {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin: -0.65rem -0.78rem 0.42rem;
+  margin: -0.65rem -0.75rem 0.42rem;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #1b1b1b;
-  background: #111;
-  min-height: 34px;
+  border-bottom: 1px solid var(--panel-border-dark);
+  background: var(--header-bg);
 }
 
 .panel-head h2 {
   margin: 0;
-  font-family: "Press Start 2P", monospace;
+  font-family: var(--pixel-font);
   font-size: 0.72rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--header-text);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -165,179 +180,85 @@ body::before {
 .window-controls {
   display: inline-flex;
   align-items: center;
-  gap: 0.18rem;
+  gap: 0.25rem;
 }
 
 .window-btn {
-  width: 16px;
-  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #c0c0c0;
+  width: var(--window-btn-size);
+  height: var(--window-btn-size);
+  border: 1px solid var(--panel-border-header);
+  background: var(--panel-bg);
   color: #0f0f0f;
-  border: 1px solid #202020;
-  box-shadow:
-    inset -1px -1px #292929,
-    inset 1px 1px #ffffff;
-  font-family: "Press Start 2P", monospace;
-  font-size: 8px;
+  box-shadow: var(--control-inset-shadow);
+  font-family: var(--pixel-font);
+  font-size: var(--window-btn-font-size);
   line-height: 1;
 }
 
+#controls-panel {
+  flex: 0 0 42%;
+  height: 70%;
+  padding: 0.65rem;
+  transform: translate(0.5rem, -0.25rem);
+}
+
 #template-panel {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 #template-checkboxes {
   flex: 1;
-  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 0.25rem;
+  padding-top: 0.25rem;
   column-count: 2;
-  column-gap: 1rem;
+  column-gap: 4rem;
 }
 
 .template-option {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 0.45rem;
-  break-inside: avoid;
-  color: #111;
-  font-size: 0.78rem;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--panel-text);
+  font-size: 0.725rem;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-#summary-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: #111;
-  font-size: 0.84rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 #controls-footer {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-top: 0.45rem;
+  margin-top: 0.5rem;
+  min-width: 0;
 }
 
-input[type="checkbox"] {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 1px solid #242424;
-  background: #d8d8d8;
-  box-shadow:
-    inset -1px -1px #363636,
-    inset 1px 1px #ffffff;
-  display: inline-grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-input[type="checkbox"]::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  transform: scale(0);
-  transition: transform 120ms ease;
-  background: #2b52ff;
-  box-shadow: 0 0 0 1px rgba(16, 16, 16, 0.35) inset;
-}
-
-input[type="checkbox"]:checked::before {
-  transform: scale(1);
+#summary-option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--panel-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 #actions-row {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
   gap: 0.5rem;
-}
-
-.action-btn {
-  font-family: "Press Start 2P", monospace;
-  border: none;
-  outline: 1px dotted rgb(37, 37, 37);
-  outline-offset: -4px;
-  cursor: pointer;
-  background: hsl(0deg 0% 75%);
-  color: #111;
-  box-shadow:
-    inset -1px -1px #292929,
-    inset 1px 1px #fff,
-    inset -2px -2px rgb(158, 158, 158),
-    inset 2px 2px #ffffff;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  border-radius: 0 !important;
-  padding: 6px 18px;
-  transition: opacity 120ms ease;
-}
-
-.action-btn:hover {
-  filter: brightness(1.05);
-}
-
-.action-btn:active {
-  box-shadow:
-    inset -1px -1px #fff,
-    inset 1px 1px #292929,
-    inset -2px -2px #ffffff,
-    inset 2px 2px rgb(158, 158, 158);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-#log-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.35rem;
-  padding-bottom: 2.35rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 14px;
-  line-height: 1.25;
-  color: #111;
-}
-
-.log-line {
-  word-break: break-word;
-}
-
-.log-log {
-  color: #111;
-}
-
-.log-warn {
-  color: #7a5a00;
-}
-
-.log-error {
-  color: #8b0f20;
+  min-width: 0;
 }
 
 #progress-panel {
   display: none;
-  margin-top: 0.45rem;
-  margin-right: 0;
-  padding-top: 0.45rem;
-  border-top: none;
+  margin-top: 0.5rem;
+  padding-top: 0.25rem;
 }
 
 #progress-panel.is-visible {
@@ -347,111 +268,97 @@ input[type="checkbox"]:checked::before {
 .progress-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.35rem;
-  color: #111;
-  font-size: 0.60rem;
-  font-family: "Press Start 2P", monospace;
+  margin-bottom: 0.5rem;
+  color: var(--panel-text);
+  font-family: var(--pixel-font);
+  font-size: 0.65rem;
   text-transform: uppercase;
 }
 
 #progress-track {
   width: 100%;
-  height: 12px;
+  height: var(--progress-height);
   overflow: hidden;
-  border: 1px solid #1b1b1b;
-  background: #8a8a8a;
-  box-shadow:
-    inset -1px -1px #2a2a2a,
-    inset 1px 1px #dfdfdf;
+  border: 1px solid var(--panel-border-dark);
+  background: var(--panel-bg-progress);
+  box-shadow: inset -1px -1px var(--shadow-dark), inset 1px 1px var(--white-soft);
 }
 
 #progress-fill {
   width: 0%;
   height: 100%;
   background:
-    linear-gradient(90deg, #1d7f2a, #4bd76b),
+    linear-gradient(90deg, var(--accent-green-dark), var(--accent-green-light)),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.25) 0 6px, rgba(255, 255, 255, 0) 6px 12px);
   background-blend-mode: screen;
-  transition: width 220ms linear;
-  animation: progressShift 2.2s linear infinite;
+  transition: width var(--progress-transition);
+  animation: progressShift var(--progress-shift-duration) linear infinite;
 }
 
-#clear-logs {
-  position: absolute;
-  right: calc(0.20rem + 25px);
-  bottom: 0.35rem;
-  min-width: 92px;
-  z-index: 3;
-}
-
-#open-folder-button {
-  position: static;
-  align-self: flex-end;
-  margin-top: 0.5rem;
-  min-width: 130px;
+#output-panel {
+  z-index: 1;
+  flex: 0 0 55%;
+  height: 91%;
+  padding: 0.65rem 0.75rem;
+  transform: translate(-0.5rem, 0.25rem);
 }
 
 #output-toolbar {
   display: flex;
-  gap: 0.45rem;
-  margin-bottom: 0.45rem;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 #output-file-select {
-  flex: 0 0 60%;
+  min-width: 55%;
   max-width: 55%;
-  min-width: 180px;
-  border: 1px solid #242424;
-  background: #d8d8d8;
-  color: #111;
-  box-shadow:
-    inset -1px -1px #363636,
-    inset 1px 1px #ffffff;
-  font-family: "Press Start 2P", monospace;
+  border: 1px solid var(--panel-border-mid);
+  background: var(--panel-bg-alt);
+  color: var(--panel-text);
+  box-shadow: var(--control-inset-shadow);
+  font-family: var(--pixel-font);
   font-size: 10px;
-  padding: 6px 8px;
+  padding: 5px 10px;
 }
 
 #output-file-meta {
-  margin-left: auto;
-  color: #333;
-  font-size: 9px;
-  font-family: "Press Start 2P", monospace;
+  color: var(--panel-text-muted);
+  font-family: var(--pixel-font);
+  font-size: 10px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 #output-view {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  border: 1px solid #242424;
-  background: #d8d8d8;
-  box-shadow:
-    inset -1px -1px #363636,
-    inset 1px 1px #ffffff;
-  padding: 0.35rem;
+  padding: 0.25rem;
+  border: 1px solid var(--panel-border-mid);
+  background: var(--panel-bg-alt);
+  box-shadow: var(--control-inset-shadow);
 }
 
 .output-empty {
-  color: #444;
-  font-size: 0.73rem;
+  width: 100%;
+  color: var(--panel-text-soft);
+  font-size: 1.15rem;
   text-transform: uppercase;
 }
 
 .output-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: var(--panel-text);
+  font-family: var(--mono-font);
   font-size: 14px;
-  color: #111;
 }
 
 .output-table th,
 .output-table td {
-  padding: 0.20rem 0.25rem;
+  padding: 0.25rem;
   border-bottom: 1px solid #a9a9a9;
   text-align: left;
 }
@@ -461,25 +368,162 @@ input[type="checkbox"]:checked::before {
   text-align: right;
 }
 
-.output-json {
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.output-table tbody tr:nth-child(odd) {
+  background-color: var(--table-odd-lines);
+}
+
+.output-table tbody tr:nth-child(even) {
+  background-color: var(--white-mid);
+}
+
+#open-folder-button {
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
+
+#logs-panel {
+  position: absolute;
+  align-self: flex-end;
+  inset: 0.25rem 2.25rem;
+  width: 42%;
+  height: 32%;
+  padding: 0.65rem 0.75em 0.1rem;
+}
+
+#log-list {
+  flex: 1;
+  overflow-y: auto;
+  color: var(--panel-text);
+  font-family: var(--mono-font);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.log-line {
+  word-break: break-word;
+}
+
+.log-log {
+  color: var(--panel-text);
+}
+
+.log-warn {
+  color: var(--panel-warn);
+}
+
+.log-error {
+  color: var(--panel-error);
+}
+
+#logs-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  background-color: transparent;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border: 1px solid var(--panel-border-mid);
+  background: var(--panel-bg-alt);
+  box-shadow: var(--control-inset-shadow);
+  cursor: pointer;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  transform: scale(0);
+  transition: transform var(--transition-fast);
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 1px rgba(16, 16, 16, 0.35) inset;
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.action-btn {
+  border: none;
+  border-radius: 0;
+  outline: 1px dotted rgb(37, 37, 37);
+  outline-offset: -4px;
+  background: hsl(0deg 0% 75%);
+  color: var(--panel-text);
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  font-family: var(--pixel-font);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 7px 15px;
+  transition: opacity var(--transition-fast);
+}
+
+.action-btn:hover {
+  filter: brightness(1.05);
+}
+
+.action-btn:active {
+  box-shadow: var(--button-shadow-active);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#template-checkboxes,
+#log-list,
+#output-view {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--panel-bg-track);
+}
+
+#app-meta-block {
+  position: absolute;
+  right: 0.5em;
+  bottom: 0.1rem;
+  z-index: 620;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  color: var(--white);
+  animation: rgbText 2s steps(9) infinite alternate;
+}
+
+#app-name {
+  font-family: var(--pixel-font);
+  font-size: 16px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+#app-version {
+  align-self: center;
+  margin-top: 0.25rem;
+  color: var(--white);
   font-size: 12px;
-  line-height: 1.35;
-  color: #111;
-  white-space: pre-wrap;
+  line-height: 1.25;
+  text-align: center;
 }
 
 #github-link {
   display: inline-flex;
   align-items: center;
   align-self: center;
-  gap: 0.35rem;
-  color: #ffffff;
-  text-decoration: none;
-  margin-top: 0.10rem;
+  gap: 0.5rem;
+  margin-top: 0.1rem;
   margin-right: 1.25rem;
-  font-family: "Press Start 2P", monospace;
+  color: var(--github-text);
+  text-decoration: none;
+  font-family: var(--pixel-font);
   font-size: 12px;
   text-align: center;
   animation: rgbText 1.4s steps(9) infinite alternate;
@@ -488,86 +532,10 @@ input[type="checkbox"]:checked::before {
 #github-link svg {
   width: 18px;
   height: 18px;
-  flex: 0 0 auto;
 }
 
 #github-link:hover {
   text-decoration: underline;
-}
-
-#app-meta-block {
-  position: absolute;
-  right: 0.15rem;
-  bottom: 0.1rem;
-  width: max-content;
-  padding: 0;
-  z-index: 620;
-  color: #ffffff;
-  animation: rgbText 2s steps(9) infinite alternate;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-#app-name {
-  font-family: "Press Start 2P", monospace;
-  font-size: 16px;
-  line-height: 1.10;
-  text-transform: uppercase;
-}
-
-#app-version {
-  margin-top: 0.25rem;
-  color: #ffffff;
-  font-size: 12px;
-  line-height: 1.10;
-  align-self: center;
-  text-align: center;
-}
-
-#template-checkboxes,
-#log-list,
-#output-view {
-  scrollbar-width: thin;
-  scrollbar-color: #3a3a3a #9a9a9a;
-}
-
-#template-checkboxes::-webkit-scrollbar,
-#log-list::-webkit-scrollbar,
-#output-view::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-#template-checkboxes::-webkit-scrollbar-track,
-#log-list::-webkit-scrollbar-track,
-#output-view::-webkit-scrollbar-track {
-  background: #9a9a9a;
-  border-left: 1px solid #3b3b3b;
-  border-top: 1px solid #d9d9d9;
-}
-
-#template-checkboxes::-webkit-scrollbar-thumb,
-#log-list::-webkit-scrollbar-thumb,
-#output-view::-webkit-scrollbar-thumb {
-  background: #c0c0c0;
-  border: 1px solid #2e2e2e;
-  box-shadow:
-    inset -1px -1px #2a2a2a,
-    inset 1px 1px #ffffff;
-}
-
-@keyframes noise {
-  0%, 100% { background-position: 0 0; }
-  10% { background-position: -5% -10%; }
-  20% { background-position: -15% 5%; }
-  30% { background-position: 7% -25%; }
-  40% { background-position: 20% 25%; }
-  50% { background-position: -25% 10%; }
-  60% { background-position: 15% 5%; }
-  70% { background-position: 0 15%; }
-  80% { background-position: 25% 35%; }
-  90% { background-position: -10% 10%; }
 }
 
 @keyframes opacity {
@@ -582,12 +550,12 @@ input[type="checkbox"]:checked::before {
 
 @keyframes scanlines {
   from {
-    background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.5) 51%);
+    background: linear-gradient(to bottom, transparent 50%, var(--scanline-shadow) 51%);
     background-size: 100% 4px;
   }
 
   to {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 50%, transparent 51%);
+    background: linear-gradient(to bottom, var(--scanline-shadow) 50%, transparent 51%);
     background-size: 100% 4px;
   }
 }
@@ -670,39 +638,3 @@ input[type="checkbox"]:checked::before {
   }
 }
 
-@media (max-width: 1180px) {
-  #app-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(3, minmax(0, 1fr));
-  }
-
-  #controls-panel,
-  #logs-panel,
-  #output-panel {
-    grid-column: 1 / 2;
-    transform: none;
-    padding: 0.65rem 0.78rem 0.74rem !important;
-  }
-
-  #controls-panel {
-    grid-row: 1 / 2;
-  }
-
-  #logs-panel {
-    grid-row: 2 / 3;
-  }
-
-  #output-panel {
-    grid-row: 3 / 4;
-  }
-
-  #template-checkboxes {
-    column-count: 1;
-  }
-
-  #app-meta-block {
-    position: static;
-    width: 100%;
-    margin-top: 0.5rem;
-  }
-}
