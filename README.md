@@ -46,9 +46,6 @@ WFMParserGUI/<br>
  ├─ WFMarketApiJS/<br>
  │   └─ WFMApi.js<br>
  ├─ assets/<br>
- ├─ output/<br>
- │   ├─ lists/<br>
- │   └─ prices/<br>
  ├─ index.html<br>
  ├─ install.bat<br>
  ├─ start.bat<br>
