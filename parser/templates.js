@@ -132,6 +132,13 @@ export const templates = {
             exclude: [],
         },
     },
+    archonMods: {
+        checked: false,
+        tags: {
+            include: ['archon', 'mod'],
+            exclude: []
+        }
+    },
     augments: {
         checked: false,
         tags: {
