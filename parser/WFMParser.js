@@ -3,6 +3,7 @@ import { fileOutput, sortByValues } from './Utils.js';
 export default class WFMParser {
     static #pricesCache = new Map();
     static #baseOutputFolder = './output';
+    static #reqUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 OPR/133.0.0.0 (Edition Yx GX)';
 
     static setOutputFolder(folderPath) {
         if (typeof folderPath !== 'string' || folderPath.trim().length === 0) {
@@ -158,6 +159,7 @@ export default class WFMParser {
      */
     static async parseTemplates(object, summaryFile = false, onProgress = null, shouldStop = null) {
         if(Object.keys(object).length === 0) throw new Error('Empty object');
+        WFMApi.userAgent = this.#reqUserAgent;
 
         console.log(`Parse targets: ${Object.keys(object).join(', ')}\n`);
 
